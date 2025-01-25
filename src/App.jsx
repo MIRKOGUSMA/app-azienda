@@ -439,7 +439,7 @@ const App = () => {
               <td className="p-2 border">{req.qty}</td>
               <td className="p-2 border">{req.unit}</td>
               <td className="p-2 border">
-                {req.data ? new Date(req.data).toLocaleDateString('it-IT') : ''}
+                {req.data_creazione ? new Date(req.data_creazione).toLocaleDateString('it-IT') : ''}
               </td>
               {Object.keys(PROCESSING_STEPS).map((section) => (
                 <td
