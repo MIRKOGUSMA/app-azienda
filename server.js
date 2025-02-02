@@ -18,35 +18,70 @@ const db = new sqlite3.Database("./app-azienda.db", (err) => {
   }
 });
 
-// Endpoint per recuperare tutte le richieste attive
+
+// Modify the /api/requests endpoint query to include completed and remaining counts
 app.get("/api/requests", (req, res) => {
-  // In /api/requests
   const query = `
-    SELECT r.*, c.nome AS cliente, c.codice,
-      (SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id) as completato,
-      (r.qty - (SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id)) as rimanente
-    FROM richieste r
-    JOIN clienti c ON r.cliente_id = c.id
-    WHERE r.archiviata = 0
+  SELECT 
+  r.*, 
+  c.nome AS cliente, 
+  c.codice,
+  CAST((SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id) AS REAL) AS completato,
+  CAST(r.qty AS REAL) - CAST((SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id) AS REAL) AS rimanente
+FROM richieste r
+JOIN clienti c ON r.cliente_id = c.id
+WHERE r.archiviata = 0
+
   `;
 
-    db.all(query, [], (err, rows) => {
-      if (err) {
-        console.error("Errore durante il recupero delle richieste:", err.message);
-        return res.status(500).json({ error: "Errore durante il recupero delle richieste" });
-      }
-      
-      const requests = rows.map((row) => ({
-        ...row,
-        steps: row.steps ? JSON.parse(row.steps) : {},
-        completato: row.completato || 0,
-        rimanente: parseInt(row.qty) - (row.completato || 0)
-      }));
-      res.json(requests);
-    });
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Errore durante il recupero delle richieste:", err.message);
+      return res.status(500).json({ error: "Errore durante il recupero delle richieste" });
+    }
+    
+    const requests = rows.map((row) => ({
+      ...row,
+      steps: row.steps ? JSON.parse(row.steps) : {},
+      completato: row.completato || 0,
+      rimanente: parseInt(row.qty) - (row.completato || 0)
+    }));
+    res.json(requests);
   });
+});
 
-// Endpoint per recuperare i dati della filiera
+// Add a new endpoint for archived requests
+app.get("/api/archived-requests", (req, res) => {
+  const query = `
+    SELECT 
+  r.*, 
+  c.nome AS cliente, 
+  c.codice,
+  CAST((SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id) AS REAL) AS completato,
+  CAST(r.qty AS REAL) - CAST((SELECT COALESCE(SUM(intest), 0) FROM filiera_steps WHERE richiesta_id = r.id) AS REAL) AS rimanente
+FROM richieste r
+JOIN clienti c ON r.cliente_id = c.id
+WHERE r.archiviata = 0
+
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Errore durante il recupero delle richieste archiviate:", err.message);
+      return res.status(500).json({ error: "Errore durante il recupero delle richieste archiviate" });
+    }
+    
+    const requests = rows.map((row) => ({
+      ...row,
+      steps: row.steps ? JSON.parse(row.steps) : {},
+      completato: row.completato || 0,
+      rimanente: parseInt(row.qty) - (row.completato || 0)
+    }));
+    res.json(requests);
+  });
+});
+
+// Modify the /api/filiera/:requestId endpoint to properly format data
 app.get("/api/filiera/:requestId", (req, res) => {
   const { requestId } = req.params;
   

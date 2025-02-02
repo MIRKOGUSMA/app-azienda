@@ -82,46 +82,33 @@ const App = () => {
       console.error("Errore durante l'aggiornamento dello stato completato:", error);
     }
   };
-
+// handle modal
   const handleOpenModal = async (request, section) => {
     setCurrentRequest(request);
     setCurrentSection(section);
-
+  
     if (section === 'FILIERA') {
       try {
         const response = await fetch(`/api/filiera/${request.id}`);
         const data = await response.json();
         if (data.length > 0) {
-          setRowEntries(data.map(entry => ({
-            data: entry.data.split('T')[0],
-            values: {
-              FILO: entry.filo,
-              FRESE: entry.frese,
-              SPESSORI: entry.spessori,
-              FILAGNE: entry.filagne,
-              INTEST: entry.intest
-            }
-          })));
+          setRowEntries(data);
         }
       } catch (error) {
         console.error("Errore nel recupero dati filiera:", error);
       }
-    } else {
-      const sectionData = request.steps?.[section] || {};
-      setNotes(sectionData.notes || "");
-      setQuantities(sectionData.quantities || {});
     }
     
     setModalIsOpen(true);
   };
-
+// calculate row
   const calculateRowTotal = (values) => {
     return values.INTEST || 0;
   };
-
+//calculate totalintest
   const calculateTotalIntest = () => {
-    return rowEntries.reduce((sum, row) => sum + (parseFloat(row.values.INTEST) || 0), 0);
-  };
+  return rowEntries.reduce((sum, row) => sum + (parseFloat(row.values.INTEST) || 0), 0);
+};
 
   const addNewRow = () => {
     setRowEntries([...rowEntries, {
@@ -229,7 +216,7 @@ const App = () => {
       console.error("Errore durante la cancellazione:", error);
     }
   };
-
+//modified
   const renderModalContent = () => {
     if (currentSection === 'FILIERA') {
       return (
@@ -237,7 +224,7 @@ const App = () => {
           <table className="w-full mb-3 border">
             <thead>
               <tr>
-                <th className="border p-2">note</th>
+                <th className="border p-2">Data</th>
                 {PROCESSING_STEPS.FILIERA.map(step => (
                   <th key={step} className="border p-2">{step}</th>
                 ))}
@@ -261,7 +248,7 @@ const App = () => {
                   {PROCESSING_STEPS.FILIERA.map((step) => (
                     <td key={step} className="border p-2">
                       <input
-                        type="number"
+                        type={step === 'INTEST' ? 'number' : 'text'}
                         value={row.values[step] || ''}
                         onChange={(e) => {
                           const newEntries = [...rowEntries];
@@ -284,7 +271,7 @@ const App = () => {
                   Totale INTEST:
                 </td>
                 <td className="border p-2 bg-green-100 font-bold text-center">
-                  {rowEntries.reduce((total, row) => total + (parseFloat(row.values.INTEST) || 0), 0)}
+                  {calculateTotalIntest()}
                 </td>
               </tr>
             </tfoot>
@@ -307,7 +294,7 @@ const App = () => {
         </div>
       );
     }
-    // ... resto del codice invariato
+    // ... rest of the modal content for other sections
   };
 
   return (
